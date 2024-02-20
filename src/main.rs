@@ -124,6 +124,10 @@ fn compute_verdict(output: &Path, expected_output: &Path) -> Result<Verdict> {
     let expected_output_len = expected_output.metadata()?.len();
     if expected_output_len != output_len {
         debug!("Output size is different: expected {expected_output_len}, Got {output_len}");
+        // Adding a bit of verbosity to manually validate submissions if needed
+        let mut contents = String::new();
+        expected_output.read_to_string(&mut contents)?;
+        debug!("Submitted result is: {contents}");
         return Ok(Verdict::Wa);
     }
 
