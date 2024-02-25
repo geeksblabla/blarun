@@ -504,7 +504,15 @@ fn run_php(context: &RunContext) -> Result<ExecResult> {
     for i in 0..context.times {
         let start_time = Instant::now();
         let mut child = Command::new("php")
-            .args(vec!["sol.php"])
+            .args(vec![
+                "-d", "opcache.memory_consumption=128",
+                "-d", "opcache.interned_strings_buffer=8",
+                "-d", "opcache.revalidate_freq=60",
+                "-d", "opcache.enable_cli=1",
+                "-d", "opcache.jit=function",
+                "-d", "opcache.jit_buffer_size=128M",
+                "-f", "sol.php"
+            ])
             .current_dir(&tmp_dir)
             .spawn()?;
 
