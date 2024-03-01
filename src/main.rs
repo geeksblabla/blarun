@@ -901,6 +901,7 @@ fn run_file(context: &RunContext) -> Result<ExecResult> {
     source_file.push(context.solution_file);
     match extension.to_str().unwrap() {
         "cpp" => run_cpp(context),
+        "cxx" => run_cpp(context),
         "cc" => run_cpp(context),
         "c" => run_cpp(context),
         "java" => run_java(context),
