@@ -42,20 +42,22 @@ struct Args {
     #[arg(long, default_value_t = 5)]
     times_to_run: u32,
 
-    #[arg(long)]
+    #[arg(long, default_value_t = String::new())]
     cgroup_path: String,
 }
 
 // Move the pid to the cgroup
 fn move_to_cgroup(pid: u32, context: &RunContext) -> Result<()> {
-    let procs_file_path = format!("{}/cgroup.procs", context.cgroup_path);
-    let pid_string = pid.to_string();
+    if !context.cgroup_path.is_empty() {
+        let procs_file_path = format!("{}/cgroup.procs", context.cgroup_path);
+        let pid_string = pid.to_string();
 
-    std::fs::OpenOptions::new()
-        .write(true)
-        .append(true)
-        .open(procs_file_path)?
-        .write_all(pid_string.as_bytes())?;
+        std::fs::OpenOptions::new()
+            .write(true)
+            .append(true)
+            .open(procs_file_path)?
+            .write_all(pid_string.as_bytes())?;
+    }
 
     Ok(())
 }
