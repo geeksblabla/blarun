@@ -52,9 +52,24 @@ struct Args {
     cgroup_path: String,
 }
 
-fn cooloff(context: &RunContext) {
-    debug!("Cool-off delay {0}s", context.cooloff);
-    thread::sleep(time::Duration::from_secs(context.cooloff));
+// Move the pid to the cgroup
+fn drop_caches() -> Result<()> {
+    std::fs::OpenOptions::new()
+        .write(true)
+        .append(true)
+        .open("/proc/sys/vm/drop_caches")?
+        .write_all("3".as_bytes())?;
+
+    Ok(())
+}
+
+fn cooloff(context: &RunContext) -> Result<()> {
+    if context.cooloff>0 {
+        debug!("Dropping caches and cool-off delay {0}s", context.cooloff);
+        drop_caches()?;
+        thread::sleep(time::Duration::from_secs(context.cooloff));
+    }
+    Ok(())
 }
 
 // Move the pid to the cgroup
@@ -204,7 +219,7 @@ fn run_rust(context: &RunContext) -> Result<ExecResult> {
 
     let mut times = vec![];
     for i in 0..context.times {
-        cooloff(context);
+        cooloff(context)?;
         debug!("Starting execution #{i}");
         let start_time = Instant::now();
         let mut child = Command::new(output_path.to_str().unwrap())
@@ -315,7 +330,7 @@ fn run_cpp(context: &RunContext) -> Result<ExecResult> {
 
     let mut times = vec![];
     for i in 0..context.times {
-        cooloff(context);
+        cooloff(context)?;
         debug!("Starting execution #{i}");
         let start_time = Instant::now();
         let mut child = Command::new(output_path.to_str().unwrap())
@@ -426,7 +441,7 @@ fn run_java(context: &RunContext) -> Result<ExecResult> {
 
     let mut times = vec![];
     for i in 0..context.times {
-        cooloff(context);
+        cooloff(context)?;
         debug!("Starting execution #{i}");
         let start_time = Instant::now();
         let mut child = Command::new("java")
@@ -799,7 +814,7 @@ fn run_golang(context: &RunContext) -> Result<ExecResult> {
 
     let mut times = vec![];
     for i in 0..context.times {
-        cooloff(context);
+        cooloff(context)?;
         debug!("Starting execution #{i}");
         let start_time = Instant::now();
         let mut child = Command::new(output_path.to_str().unwrap())
