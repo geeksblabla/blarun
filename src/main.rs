@@ -1,6 +1,8 @@
 use log::{debug, info};
 use serde_with::{serde_as, DurationMilliSeconds};
+use core::time;
 use std::collections::BTreeMap;
+use std::thread;
 use std::time::Duration;
 use std::{path::PathBuf, process::Command, time::Instant};
 use wait_timeout::ChildExt;
@@ -39,11 +41,20 @@ struct Args {
     #[arg(long)]
     timeout_sec: u64,
 
+    // How long to cool off before runs
+    #[arg(long, default_value_t = 0)]
+    cooloff_sec: u64,
+
     #[arg(long, default_value_t = 5)]
     times_to_run: u32,
 
     #[arg(long, default_value_t = String::new())]
     cgroup_path: String,
+}
+
+fn cooloff(context: &RunContext) {
+    debug!("Cool-off delay {0}s", context.cooloff);
+    thread::sleep(time::Duration::from_secs(context.cooloff));
 }
 
 // Move the pid to the cgroup
@@ -193,6 +204,7 @@ fn run_rust(context: &RunContext) -> Result<ExecResult> {
 
     let mut times = vec![];
     for i in 0..context.times {
+        cooloff(context);
         debug!("Starting execution #{i}");
         let start_time = Instant::now();
         let mut child = Command::new(output_path.to_str().unwrap())
@@ -303,6 +315,7 @@ fn run_cpp(context: &RunContext) -> Result<ExecResult> {
 
     let mut times = vec![];
     for i in 0..context.times {
+        cooloff(context);
         debug!("Starting execution #{i}");
         let start_time = Instant::now();
         let mut child = Command::new(output_path.to_str().unwrap())
@@ -413,7 +426,8 @@ fn run_java(context: &RunContext) -> Result<ExecResult> {
 
     let mut times = vec![];
     for i in 0..context.times {
-        debug!("Starting execution run #{i}");
+        cooloff(context);
+        debug!("Starting execution #{i}");
         let start_time = Instant::now();
         let mut child = Command::new("java")
             .args(vec!["Main"])
@@ -785,6 +799,7 @@ fn run_golang(context: &RunContext) -> Result<ExecResult> {
 
     let mut times = vec![];
     for i in 0..context.times {
+        cooloff(context);
         debug!("Starting execution #{i}");
         let start_time = Instant::now();
         let mut child = Command::new(output_path.to_str().unwrap())
@@ -896,6 +911,7 @@ struct RunContext<'a> {
     times: u32,
     root: &'a Path,
     user: &'a str,
+    cooloff: u64,
 }
 
 impl<'a> RunContext<'a> {
@@ -1024,6 +1040,7 @@ fn main() {
             timeout: Duration::from_secs(args.timeout_sec),
             times: args.times_to_run,
             cgroup_path: args.cgroup_path.clone(),
+            cooloff: args.cooloff_sec,
         };
 
         match run_file(&run_context) {
