@@ -286,50 +286,50 @@ fn run_rust(context: &RunContext) -> Result<ExecResult> {
     })
 }
 fn run_cpp(context: &RunContext) -> Result<ExecResult> {
-    let tmp_dir = tempfile::tempdir()?;
-
-    let mut output_path = tmp_dir.path().to_path_buf();
-    output_path.push("sol");
-
-    let mut res = Command::new("/usr/bin/g++")
-        .args(vec![
-            "-Wall",
-            "--std=c++17",
-            "-O3",
-            context.abs_solution().to_str().unwrap(),
-            "-o",
-            output_path.to_str().unwrap(),
-        ])
-        .spawn()?;
-
-    match res.wait() {
-        Ok(status) => {
-            info!("Finished compilation of the target: {output_path:?} with exit code: {status}");
-            if let Some(code) = status.code() {
-                if code != 0 {
-                    return Err(anyhow::anyhow!(
-                        "Failed to compile solution file: none-zero exit code"
-                    ));
-                }
-            }
-        }
-        Err(e) => return Err(anyhow::anyhow!("Failed to compile solution file: {e:?}")),
-    }
-
-    let mut input_file = tmp_dir.path().to_path_buf();
-    input_file.push("input.txt");
-    let mut output_file = tmp_dir.path().to_path_buf();
-    output_file.push("output.txt");
-
-    info!(
-        "Symlinking file from: {:?} to {:?}",
-        context.input_file, input_file
-    );
-
-    std::os::unix::fs::symlink(context.input_file, &input_file)?;
-
     let mut times = vec![];
     for i in 0..context.times {
+        let tmp_dir = tempfile::tempdir()?;
+
+        let mut output_path = tmp_dir.path().to_path_buf();
+        output_path.push("sol");
+
+        let mut res = Command::new("/usr/bin/g++")
+            .args(vec![
+                "-Wall",
+                "--std=c++17",
+                "-O3",
+                context.abs_solution().to_str().unwrap(),
+                "-o",
+                output_path.to_str().unwrap(),
+            ])
+            .spawn()?;
+
+        match res.wait() {
+            Ok(status) => {
+                info!("Finished compilation of the target: {output_path:?} with exit code: {status}");
+                if let Some(code) = status.code() {
+                    if code != 0 {
+                        return Err(anyhow::anyhow!(
+                            "Failed to compile solution file: none-zero exit code"
+                        ));
+                    }
+                }
+            }
+            Err(e) => return Err(anyhow::anyhow!("Failed to compile solution file: {e:?}")),
+        }
+
+        let mut input_file = tmp_dir.path().to_path_buf();
+        input_file.push("input.txt");
+        let mut output_file = tmp_dir.path().to_path_buf();
+        output_file.push("output.txt");
+
+        info!(
+            "Symlinking file from: {:?} to {:?}",
+            context.input_file, input_file
+        );
+
+        std::os::unix::fs::symlink(context.input_file, &input_file)?;
+
         cooloff(context)?;
         debug!("Starting execution #{i}");
         let start_time = Instant::now();
