@@ -358,13 +358,27 @@ fn get_matching_output(input_file: &Path, output_files: &[PathBuf]) -> Option<Pa
     None
 }
 
-fn ensure_correct(context: &RunContext, cmd: Vec<String>) -> Result<Verdict> {
+fn ensure_correct(
+    context: &RunContext,
+    cmd: Vec<String>,
+    src_name: Option<&str>,
+) -> Result<Verdict> {
     info!("Starting correctness checks");
     let tmp_dir = tempfile::tempdir()?;
     let tmp = tmp_dir.path();
     let in_files = extract_files(context.correctness_data, ".in");
     let out_files = extract_files(context.correctness_data, ".out");
 
+    if let Some(src) = src_name {
+        let mut sol_file = tmp.to_path_buf();
+        sol_file.push(src);
+        debug!(
+            "Copying solution source from: {:?} to {:?}",
+            context.abs_solution(),
+            sol_file
+        );
+        std::fs::copy(context.abs_solution(), sol_file)?;
+    }
     if in_files.len() != out_files.len() {
         return Err(anyhow!(
             "Unexpected in_files vs out_files length, in files length: {}, out files length {}",
@@ -477,7 +491,11 @@ fn run_cpp(context: &RunContext) -> Result<ExecResult> {
         Err(e) => return Err(anyhow::anyhow!("Failed to compile solution file: {e:?}")),
     }
 
-    let verdict = ensure_correct(context, vec![output_path.to_str().unwrap().to_string()])?;
+    let verdict = ensure_correct(
+        context,
+        vec![output_path.to_str().unwrap().to_string()],
+        None,
+    )?;
     if !matches!(verdict, Verdict::Ac) {
         info!("Solution failed correctness checks, exiting early");
         return Ok(ExecResult {
@@ -597,6 +615,19 @@ fn run_java(context: &RunContext) -> Result<ExecResult> {
         Err(e) => return Err(anyhow::anyhow!("Failed to compile solution file: {e:?}")),
     }
 
+    let verdict = ensure_correct(context, vec!["java".to_string(), "Main".to_string()], None)?;
+    if !matches!(verdict, Verdict::Ac) {
+        info!("Solution failed correctness checks, exiting early");
+        return Ok(ExecResult {
+            verdict,
+            times: vec![],
+        });
+    }
+
+    info!("Solution passed correctness checks");
+
+    drop_file_cache()?;
+
     let mut input_file = tmp_dir.path().to_path_buf();
     input_file.push("input.txt");
 
@@ -682,6 +713,24 @@ fn run_java(context: &RunContext) -> Result<ExecResult> {
 }
 
 fn run_php(context: &RunContext) -> Result<ExecResult> {
+    let verdict = ensure_correct(
+        context,
+        vec!["php".to_string(), "sol.php".to_string()],
+        Some("sol.php"),
+    )?;
+
+    if !matches!(verdict, Verdict::Ac) {
+        info!("Solution failed correctness checks, exiting early");
+        return Ok(ExecResult {
+            verdict,
+            times: vec![],
+        });
+    }
+
+    info!("Solution passed correctness checks");
+
+    drop_file_cache()?;
+
     let tmp_dir = tempfile::tempdir()?;
 
     let mut src_path = tmp_dir.path().to_path_buf();
@@ -794,6 +843,23 @@ fn run_python(context: &RunContext) -> Result<ExecResult> {
     // Copy the source file to the compilation directory
     std::fs::copy(context.abs_solution(), &src_path)?;
 
+    let verdict = ensure_correct(
+        context,
+        vec!["python3".to_string(), "main.py".to_string()],
+        Some("main.py"),
+    )?;
+    if !matches!(verdict, Verdict::Ac) {
+        info!("Solution failed correctness checks, exiting early");
+        return Ok(ExecResult {
+            verdict,
+            times: vec![],
+        });
+    }
+
+    info!("Solution passed correctness checks");
+
+    drop_file_cache()?;
+
     let mut input_file = tmp_dir.path().to_path_buf();
     input_file.push("input.txt");
 
@@ -873,6 +939,21 @@ fn run_python(context: &RunContext) -> Result<ExecResult> {
 }
 
 fn run_node(context: &RunContext) -> Result<ExecResult> {
+    let verdict = ensure_correct(
+        context,
+        vec!["node".to_string(), "main.js".to_string()],
+        Some("main.js"),
+    )?;
+
+    if !matches!(verdict, Verdict::Ac) {
+        info!("Solution failed correctness checks, exiting early");
+        return Ok(ExecResult {
+            verdict,
+            times: vec![],
+        });
+    }
+
+    info!("Solution passed correctness checks");
     let tmp_dir = tempfile::tempdir()?;
 
     let mut src_path = tmp_dir.path().to_path_buf();
