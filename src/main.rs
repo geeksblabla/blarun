@@ -122,13 +122,20 @@ struct ExecResult {
 
 impl ExecResult {
     pub fn avg_time(&self) -> Duration {
-        if self.times.is_empty() {
+        let mut times = self.times.clone();
+        times.sort();
+        if times.is_empty() {
             return Duration::from_millis(0);
         }
-        // Remove the slowest and fastest solutions to further remove outliers
-        let new_times = &self.times[1..self.times.len() - 1];
-        let sum: Duration = new_times.iter().sum();
-        sum / (self.times.len() as u32)
+        if times.len() > 2 {
+            // Remove the slowest and fastest solutions to further remove outliers
+            let new_times = &times[1..self.times.len() - 1];
+            let sum: Duration = new_times.iter().sum();
+            sum / (new_times.len() as u32)
+        } else {
+            let sum: Duration = times.iter().sum();
+            sum / (self.times.len() as u32)
+        }
     }
 
     pub fn median(&self) -> Duration {
@@ -137,9 +144,13 @@ impl ExecResult {
         }
         let mut times = self.times.clone();
         times.sort();
-        // Remove the slowest and fastest solutions to further remove outliers
-        let new_times = &times[1..times.len() - 1];
-        new_times[new_times.len() / 2]
+        if times.len() > 2 {
+            // Remove the slowest and fastest solutions to further remove outliers
+            let new_times = &times[1..times.len() - 1];
+            new_times[new_times.len() / 2]
+        } else {
+            times[times.len() / 2]
+        }
     }
 }
 
