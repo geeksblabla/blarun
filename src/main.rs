@@ -302,6 +302,7 @@ fn extract_files(directory_path: &Path, suf: &str) -> Vec<PathBuf> {
         }
     }
 
+    in_files.sort();
     in_files
 }
 
@@ -414,6 +415,10 @@ fn ensure_correct(context: &RunContext, cmd: Vec<String>) -> Result<Verdict> {
         debug!("Correctness execution finished in: {elapsed:?}");
 
         if let Some(expected_output) = get_matching_output(&file_path, &out_files) {
+            debug!(
+                "Found matching output_file: input: {:?}, output: {:?}",
+                file_path, expected_output
+            );
             let verdict = compute_verdict(&output_path, &expected_output)?;
             if !matches!(verdict, Verdict::Ac) {
                 info!("Solution didn't pass correctness check, aborting early!");
