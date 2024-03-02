@@ -152,7 +152,7 @@ fn compute_verdict(output: &Path, expected_output: &Path) -> Result<Verdict> {
     output.read_to_string(&mut output_str)?;
     expected_output.read_to_string(&mut ex_output_str)?;
     if output_str.trim() != ex_output_str.trim() {
-        info!("Solution comparison failed, output for the solution is: {output_str}");
+        info!("Solution comparison failed, output for the solution is: {output_str}\n expected output is {ex_output_str}");
         return Ok(Verdict::Wa);
     }
     Ok(Verdict::Ac)
