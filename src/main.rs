@@ -219,6 +219,21 @@ fn run_rust(context: &RunContext) -> Result<ExecResult> {
         Err(e) => return Err(anyhow::anyhow!("Failed to compile solution file: {e:?}")),
     }
 
+    let verdict = ensure_correct(
+        context,
+        vec![output_path.to_str().unwrap().to_string()],
+        None,
+    )?;
+    if !matches!(verdict, Verdict::Ac) {
+        info!("Solution failed correctness checks, exiting early");
+        return Ok(ExecResult {
+            verdict,
+            times: vec![],
+        });
+    }
+
+    info!("Solution passed correctness checks");
+
     let mut input_file = tmp_dir.path().to_path_buf();
     input_file.push("input.txt");
     let mut output_file = tmp_dir.path().to_path_buf();
@@ -377,8 +392,33 @@ fn ensure_correct(
             context.abs_solution(),
             sol_file
         );
-        std::fs::copy(context.abs_solution(), sol_file)?;
+        std::fs::copy(context.abs_solution(), &sol_file)?;
+        if context.lang()? == "java" {
+            // Java could generate more than one file after compilation, let's recompile to ensure
+            // that '.class' files are getting properly generated.
+            let mut res = Command::new("javac")
+                .args(vec![sol_file.to_str().unwrap()])
+                .current_dir(tmp)
+                .spawn()?;
+
+            match res.wait() {
+                Ok(status) => {
+                    debug!(
+                        "Finished compilation of the target: {sol_file:?} with exit code: {status}"
+                    );
+                    if let Some(code) = status.code() {
+                        if code != 0 {
+                            return Err(anyhow::anyhow!(
+                                "Failed to compile solution file: none-zero exit code"
+                            ));
+                        }
+                    }
+                }
+                Err(e) => return Err(anyhow::anyhow!("Failed to compile solution file: {e:?}")),
+            }
+        }
     }
+
     if in_files.len() != out_files.len() {
         return Err(anyhow!(
             "Unexpected in_files vs out_files length, in files length: {}, out files length {}",
@@ -1159,14 +1199,7 @@ fn extract_language(context: &RunContext) -> String {
 }
 
 fn run_file(context: &RunContext) -> Result<ExecResult> {
-    let extension = context
-        .solution_file
-        .extension()
-        .ok_or(anyhow::anyhow!("failed to get file extension"))?;
-
-    let mut source_file = context.root.to_path_buf();
-    source_file.push(context.solution_file);
-    match extension.to_str().unwrap() {
+    match context.lang()? {
         "cpp" => run_cpp(context),
         "cc" => run_cpp(context),
         "c" => run_cpp(context),
@@ -1201,6 +1234,14 @@ impl<'a> RunContext<'a> {
         let mut result = self.root.to_path_buf();
         result.push(self.solution_file);
         result
+    }
+
+    fn lang(&self) -> Result<&str> {
+        let extension = self
+            .solution_file
+            .extension()
+            .ok_or(anyhow::anyhow!("failed to get file extension"))?;
+        Ok(extension.to_str().unwrap())
     }
 }
 
