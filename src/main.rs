@@ -394,6 +394,7 @@ fn ensure_correct(
         );
         std::fs::copy(context.abs_solution(), &sol_file)?;
         if context.lang()? == "java" {
+            debug!("Recompiling Java solution for correctness checks");
             // Java could generate more than one file after compilation, let's recompile to ensure
             // that '.class' files are getting properly generated.
             let mut res = Command::new("javac")
@@ -655,7 +656,11 @@ fn run_java(context: &RunContext) -> Result<ExecResult> {
         Err(e) => return Err(anyhow::anyhow!("Failed to compile solution file: {e:?}")),
     }
 
-    let verdict = ensure_correct(context, vec!["java".to_string(), "Main".to_string()], None)?;
+    let verdict = ensure_correct(
+        context,
+        vec!["java".to_string(), "Main".to_string()],
+        Some("Main.java"),
+    )?;
     if !matches!(verdict, Verdict::Ac) {
         info!("Solution failed correctness checks, exiting early");
         return Ok(ExecResult {
