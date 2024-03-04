@@ -334,7 +334,11 @@ fn extract_files(directory_path: &Path, suf: &str) -> Vec<PathBuf> {
 
 fn copy_to_input_txt(input_path: &Path, file_path: &Path) -> Result<()> {
     // Create or open the input.txt file for writing
-    let mut input_txt_file = std::fs::File::create(input_path)?;
+    let mut input_txt_file = OpenOptions::new()
+        .write(true)
+        .truncate(true)
+        .create(true)
+        .open(input_path)?;
 
     // Open the input file for reading
     let mut file = std::fs::File::open(file_path)?;
@@ -343,8 +347,7 @@ fn copy_to_input_txt(input_path: &Path, file_path: &Path) -> Result<()> {
     let mut content = String::new();
     file.read_to_string(&mut content)?;
 
-    // Write the content to the input.txt file
-    writeln!(&mut input_txt_file, "{}", content)?;
+    input_txt_file.write_all(content.as_bytes())?;
 
     Ok(())
 }
