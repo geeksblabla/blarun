@@ -1093,7 +1093,7 @@ fn run_golang(context: &RunContext) -> Result<ExecResult> {
     let mut output_path = tmp_dir.path().to_path_buf();
     output_path.push("sol");
 
-    let mut res = Command::new("/usr/local/bin/go")
+    let mut res = Command::new("go")
         .args(vec![
             "build",
             "-o",
@@ -1115,6 +1115,23 @@ fn run_golang(context: &RunContext) -> Result<ExecResult> {
         }
         Err(e) => return Err(anyhow::anyhow!("Failed to compile solution file: {e:?}")),
     }
+
+    let verdict = ensure_correct(
+        context,
+        vec![output_path.to_str().unwrap().to_string()],
+        None,
+    )?;
+    if !matches!(verdict, Verdict::Ac) {
+        info!("Solution failed correctness checks, exiting early");
+        return Ok(ExecResult {
+            verdict,
+            times: vec![],
+        });
+    }
+
+    info!("Solution passed correctness checks");
+
+    drop_file_cache()?;
 
     let mut input_file = tmp_dir.path().to_path_buf();
     input_file.push("input.txt");
