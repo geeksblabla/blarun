@@ -196,7 +196,7 @@ fn run_rust(context: &RunContext) -> Result<ExecResult> {
     let mut output_path = tmp_dir.path().to_path_buf();
     output_path.push("sol");
 
-    let mut res = Command::new("/usr/local/bin/rustc")
+    let mut res = Command::new("rustc")
         .args(vec![
             "-O",
             context.abs_solution().to_str().unwrap(),
